@@ -42,7 +42,7 @@ const tiers: TierInfo[] = [
 export default function TribePage() {
   const params = useParams();
   const router = useRouter();
-  const { isConnected } = useAccount();
+  const { isConnected, address: userAddress } = useAccount();
   const [selectedTier, setSelectedTier] = useState<TierType | null>(null);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
 
@@ -73,15 +73,37 @@ export default function TribePage() {
     functionName: "owner",
   });
 
+  // Fetch user's NFTs from this tribe
+  const { data: userMemberTiers, refetch: refetchUserNFTs } = useReadContract({
+    address: tribeAddress,
+    abi: TribeNFTAbi,
+    functionName: "getMemberTiers",
+    args: userAddress ? [userAddress] : undefined,
+    query: {
+      enabled: !!userAddress && !!isConnected,
+    },
+  }) as { data: readonly [bigint, bigint, bigint] | undefined; refetch: () => void };
+
+  const { data: userBalance } = useReadContract({
+    address: tribeAddress,
+    abi: TribeNFTAbi,
+    functionName: "balanceOf",
+    args: userAddress ? [userAddress] : undefined,
+    query: {
+      enabled: !!userAddress && !!isConnected,
+    },
+  }) as { data: bigint | undefined };
+
   // Handle successful mint
   useEffect(() => {
     if (isConfirmed && txHash) {
       console.log("NFT minted successfully!");
       setTxHash(undefined);
       setSelectedTier(null);
-      // Refetch will happen automatically due to wagmi cache invalidation
+      // Refetch user's NFTs after successful mint
+      refetchUserNFTs();
     }
-  }, [isConfirmed, txHash]);
+  }, [isConfirmed, txHash, refetchUserNFTs]);
 
   const handleMint = async (tier: TierType, price: bigint) => {
     if (!isConnected) {
@@ -170,6 +192,15 @@ export default function TribePage() {
           </div>
         </div>
 
+        {/* User's NFTs Section */}
+        {isConnected && userAddress && (
+          <UserNFTsSection 
+            userMemberTiers={userMemberTiers}
+            userBalance={userBalance}
+            tiers={tiers}
+          />
+        )}
+
         {/* NFT Tiers */}
         <div className="space-y-6">
           <h2 className="text-2xl font-bold text-[var(--app-foreground)]">Available NFT Tiers</h2>
@@ -200,6 +231,74 @@ export default function TribePage() {
             </p>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+interface UserNFTsSectionProps {
+  userMemberTiers: readonly [bigint, bigint, bigint] | undefined;
+  userBalance: bigint | undefined;
+  tiers: TierInfo[];
+}
+
+function UserNFTsSection({ userMemberTiers, userBalance, tiers }: UserNFTsSectionProps) {
+  const totalNFTs = userBalance ? Number(userBalance) : 0;
+  
+  if (totalNFTs === 0) {
+    return (
+      <div className="bg-[var(--app-card-bg)] border border-[var(--app-card-border)] rounded-xl p-6 mb-8">
+        <h2 className="text-2xl font-bold text-[var(--app-foreground)] mb-4">Your NFTs</h2>
+        <div className="text-center py-8">
+          <Icon name="wallet" size="lg" className="text-[var(--app-foreground-muted)] mx-auto mb-3" />
+          <p className="text-[var(--app-foreground-muted)]">
+            You don&apos;t own any NFTs from this tribe yet. Mint your first NFT below!
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-[var(--app-card-bg)] border border-[var(--app-card-border)] rounded-xl p-6 mb-8">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-[var(--app-foreground)]">Your NFTs</h2>
+        <div className="text-right">
+          <p className="text-sm text-[var(--app-foreground-muted)]">Total Owned</p>
+          <p className="text-lg font-semibold text-[var(--app-foreground)]">{totalNFTs}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {tiers.map((tier, index) => {
+          const count = userMemberTiers ? Number(userMemberTiers[index]) : 0;
+          
+          return (
+            <div 
+              key={tier.type}
+              className={`bg-gradient-to-r ${tier.gradient} border ${tier.borderColor} rounded-lg p-4`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-6 h-6 rounded-full bg-gradient-to-r ${tier.color}`}></div>
+                  <span className="font-semibold text-[var(--app-foreground)]">{tier.name}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl font-bold text-[var(--app-foreground)]">{count}</span>
+                  <p className="text-xs text-[var(--app-foreground-muted)]">owned</p>
+                </div>
+              </div>
+              
+              {count > 0 && (
+                <div className="mt-2 pt-2 border-t border-current border-opacity-20">
+                  <p className="text-xs text-[var(--app-foreground-muted)]">
+                    You are a {tier.name} member of this tribe!
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -236,13 +335,7 @@ function TierCard({ tier, tribeAddress, onMint, isLoading, disabled }: TierCardP
     args: [BigInt(tier.type)],
   }) as { data: bigint | undefined; isLoading: boolean };
 
-  // Debug logging
-  console.log(`${tier.name} Tier Data:`, {
-    maxSupply: maxSupply?.toString(),
-    currentSupply: currentSupply?.toString(),
-    price: price?.toString(),
-    priceInEth: price ? formatEther(price) : "0"
-  });
+
 
   // Calculate availability - only if we have valid data
   const available = (maxSupply !== undefined && currentSupply !== undefined) 
