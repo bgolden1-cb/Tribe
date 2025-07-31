@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract TribeNFT is ERC721, ERC721Enumerable, Ownable {
     enum Tier { Bronze, Silver, Gold }
 
+    string public description;
     uint256[3] public maxSupplies;
     uint256[3] public prices; // in wei (ETH)
     uint256[3] public currentSupplies;
@@ -17,10 +18,12 @@ contract TribeNFT is ERC721, ERC721Enumerable, Ownable {
 
     constructor(
         string memory name,
+        string memory _description,
         address creator,
         uint256[3] memory _maxSupplies,
         uint256[3] memory _prices
     ) ERC721(name, "TRIBE") Ownable(creator) {
+        description = _description;
         maxSupplies = _maxSupplies;
         prices = _prices;
     }
@@ -91,5 +94,10 @@ contract TribeNFT is ERC721, ERC721Enumerable, Ownable {
         uint8 t = uint8(tier);
         require(newMax >= currentSupplies[t], "Cannot reduce below current supply");
         maxSupplies[t] = newMax;
+    }
+
+    // Update description (only owner)
+    function updateDescription(string memory newDescription) public onlyOwner {
+        description = newDescription;
     }
 }

@@ -7,17 +7,20 @@ contract TribeFactory {
 
     // Add a list to track all tribes
     address[] public tribes;
+    mapping(address => address[]) public creatorTribes;
 
-    event TribeCreated(address tribeAddress, address creator, string name);
+    event TribeCreated(address tribeAddress, address creator, string name, string description);
 
     function createTribe(
         string memory name,
+        string memory description,
         uint256[3] memory maxSupplies, // [bronze, silver, gold]
         uint256[3] memory prices // [bronze, silver, gold] in wei
     ) public returns (address) {
-        TribeNFT tribe = new TribeNFT(name, msg.sender, maxSupplies, prices);
+        TribeNFT tribe = new TribeNFT(name, description, msg.sender, maxSupplies, prices);
         tribes.push(address(tribe));
-        emit TribeCreated(address(tribe), msg.sender, name);
+        creatorTribes[msg.sender].push(address(tribe));
+        emit TribeCreated(address(tribe), msg.sender, name, description);
         return address(tribe);
     }
 }
