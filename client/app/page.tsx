@@ -3,34 +3,55 @@
 import {
   useMiniKit,
   useAddFrame,
-  useOpenUrl,
 } from "@coinbase/onchainkit/minikit";
-import {
-  Name,
-  Identity,
-  Address,
-  Avatar,
-  EthBalance,
-} from "@coinbase/onchainkit/identity";
-import {
-  ConnectWallet,
-  Wallet,
-  WalletDropdown,
-  WalletDropdownDisconnect,
-} from "@coinbase/onchainkit/wallet";
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { Button } from "./components/DemoComponents";
 import { Icon } from "./components/DemoComponents";
-import { Home } from "./components/DemoComponents";
-import { Features } from "./components/DemoComponents";
+import { Navbar } from "./components/Navbar";
+import { WelcomeHero } from "./components/WelcomeHero";
+import { Footer } from "./components/Footer";
+import { MyTribes } from "./components/MyTribes";
+import { CreateTribeModal } from "./components/CreateTribeModal";
+import { TribeFactoryAbi, tribeFactoryContract } from "../lib/Tribe";
+
+import { Address, parseEther } from "viem";
+
+interface TribeData {
+  name: string;
+  description?: string;
+  goldSupply: number;
+  goldPrice: number;
+  silverSupply: number;
+  silverPrice: number;
+  bronzeSupply: number;
+  bronzePrice: number;
+}
 
 export default function App() {
   const { setFrameReady, isFrameReady, context } = useMiniKit();
+  const { isConnected } = useAccount();
   const [frameAdded, setFrameAdded] = useState(false);
-  const [activeTab, setActiveTab] = useState("home");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [tribes, setTribes] = useState<Address[]>([]);
+  const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
 
   const addFrame = useAddFrame();
-  const openUrl = useOpenUrl();
+  const { writeContract } = useWriteContract();
+  
+  // Wait for transaction confirmation
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
+
+  // Fetch user's tribes from the factory contract
+  // Note: This is a simplified approach. In a real app, you'd want to use events or indexing
+  const { data: tribeAddresses, refetch: refetchTribes } = useReadContract({
+    address: tribeFactoryContract,
+    abi: TribeFactoryAbi,
+    functionName: "tribes",
+    args: [BigInt(0)], // This would need to be enhanced to fetch all tribes
+  });
 
   useEffect(() => {
     if (!isFrameReady) {
@@ -38,10 +59,82 @@ export default function App() {
     }
   }, [setFrameReady, isFrameReady]);
 
+  // Handle successful tribe creation
+  useEffect(() => {
+    if (isConfirmed && txHash) {
+      console.log("Tribe created successfully!");
+      // Refetch tribes list
+      refetchTribes();
+      // Reset transaction hash
+      setTxHash(undefined);
+      // Close modal
+      setIsCreateModalOpen(false);
+    }
+  }, [isConfirmed, txHash, refetchTribes]);
+
+  // For demo purposes, add some test tribe addresses
+  useEffect(() => {
+    if (isConnected && tribes.length === 0) {
+      // Add some dummy addresses for testing - replace with actual contract addresses
+      setTribes([
+        "0xfCB91ad695F08FF86CE70F816a3D55706075fdb3" as Address,
+      ]);
+    }
+  }, [isConnected, tribes.length]);
+
   const handleAddFrame = useCallback(async () => {
     const frameAdded = await addFrame();
     setFrameAdded(Boolean(frameAdded));
   }, [addFrame]);
+
+  const handleCreateTribe = useCallback(async (tribeData: TribeData) => {
+    try {
+      // Convert supplies and prices to the format expected by the contract
+      const maxSupplies: readonly [bigint, bigint, bigint] = [
+        BigInt(tribeData.bronzeSupply),
+        BigInt(tribeData.silverSupply), 
+        BigInt(tribeData.goldSupply)
+      ];
+      
+      const prices: readonly [bigint, bigint, bigint] = [
+        parseEther(tribeData.bronzePrice.toString()),
+        parseEther(tribeData.silverPrice.toString()),
+        parseEther(tribeData.goldPrice.toString())
+      ];
+
+      // Call the smart contract to create the tribe
+      writeContract({
+        address: tribeFactoryContract,
+        abi: TribeFactoryAbi,
+        functionName: "createTribe",
+        args: [tribeData.name, maxSupplies, prices],
+      }, {
+        onSuccess: (hash) => {
+          setTxHash(hash);
+          console.log("Transaction submitted:", hash);
+        }
+      });
+      
+    } catch (error) {
+      console.error("Error creating tribe:", error);
+      throw error;
+    }
+  }, [writeContract]);
+
+  const handleOpenCreateModal = useCallback(() => {
+    setIsCreateModalOpen(true);
+  }, []);
+
+  const handleCloseCreateModal = useCallback(() => {
+    setIsCreateModalOpen(false);
+  }, []);
+
+  const handleTribeClick = useCallback((tribeId: string) => {
+    // TODO: Navigate to tribe detail page
+    // For now, just log the tribe ID
+    console.log("Navigating to tribe:", tribeId);
+    // In the future, you would navigate to /tribe/${tribeId}
+  }, []);
 
   const saveFrameButton = useMemo(() => {
     if (context && !context.client.added) {
@@ -70,47 +163,48 @@ export default function App() {
     return null;
   }, [context, frameAdded, handleAddFrame]);
 
+  const {data: tribesData} = useReadContract({
+    address: tribeFactoryContract,
+    abi: TribeFactoryAbi,
+    functionName: "tribes",
+  });
+
   return (
-    <div className="flex flex-col min-h-screen font-sans text-[var(--app-foreground)] mini-app-theme from-[var(--app-background)] to-[var(--app-gray)]">
-      <div className="w-full max-w-md mx-auto px-4 py-3">
-        <header className="flex justify-between items-center mb-3 h-11">
-          <div>
-            <div className="flex items-center space-x-2">
-              <Wallet className="z-10">
-                <ConnectWallet>
-                  <Name className="text-inherit" />
-                </ConnectWallet>
-                <WalletDropdown>
-                  <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
-                    <Avatar />
-                    <Name />
-                    <Address />
-                    <EthBalance />
-                  </Identity>
-                  <WalletDropdownDisconnect />
-                </WalletDropdown>
-              </Wallet>
+    <>
+      <div className={`flex flex-col min-h-screen font-sans text-[var(--app-foreground)] mini-app-theme from-[var(--app-background)] to-[var(--app-gray)] ${isCreateModalOpen ? 'blur-sm' : ''}`}>
+        {/* New Modern Navbar */}
+        <Navbar onCreateTribe={handleOpenCreateModal} />
+        
+        {/* Main Content */}
+        <div className={`flex-1 w-full mx-auto ${!isConnected ? '' : 'max-w-4xl px-4 py-6'}`}>
+          {/* Save Frame Button (positioned better) - only show when connected */}
+          {isConnected && saveFrameButton && (
+            <div className="flex justify-end mb-4">
+              {saveFrameButton}
             </div>
-          </div>
-          <div>{saveFrameButton}</div>
-        </header>
+          )}
 
-        <main className="flex-1">
-          {activeTab === "home" && <Home setActiveTab={setActiveTab} />}
-          {activeTab === "features" && <Features setActiveTab={setActiveTab} />}
-        </main>
+          <main className="flex-1">
+            {!isConnected ? (
+              <WelcomeHero />
+            ) : (
+              <MyTribes tribes={tribes} onCreateTribe={handleOpenCreateModal} onTribeClick={handleTribeClick} />
+            )}
+          </main>
 
-        <footer className="mt-2 pt-4 flex justify-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-[var(--ock-text-foreground-muted)] text-xs"
-            onClick={() => openUrl("https://base.org/builders/minikit")}
-          >
-            Built on Base with MiniKit
-          </Button>
-        </footer>
+        </div>
+        
+        {/* Footer - shown for all users */}
+        <Footer />
       </div>
-    </div>
+
+      {/* Create Tribe Modal - outside blur container */}
+      <CreateTribeModal
+        isOpen={isCreateModalOpen}
+        onClose={handleCloseCreateModal}
+        onCreateTribe={handleCreateTribe}
+        isSubmitting={isConfirming}
+      />
+    </>
   );
 }
