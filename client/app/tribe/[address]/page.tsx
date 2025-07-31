@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { Address, formatEther } from "viem";
 import { useState, useEffect } from "react";
-import { TribeNFTAbi, TierType, Listing, ListingWithToken } from "../../../lib/Tribe";
+import { TribeNFTAbi, TierType, Listing } from "../../../lib/Tribe";
 import { Button, Icon } from "../../components/DemoComponents";
 import { useIsTribeOwner } from "../../hooks/useIsTribeOwner";
 import { CreatePostSection } from "../../components/CreatePostSection";
@@ -61,7 +61,6 @@ export default function TribePage() {
   const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [selectedTokenForListing, setSelectedTokenForListing] = useState<{
     tokenId: number;
-    tierType: TierType;
     tierName: string;
   } | null>(null);
   const [marketplaceRefetch, setMarketplaceRefetch] = useState(0);
@@ -199,7 +198,7 @@ export default function TribePage() {
 
   // Marketplace handlers
   const handleListToken = (tokenId: number, tierType: TierType, tierName: string) => {
-    setSelectedTokenForListing({ tokenId, tierType, tierName });
+    setSelectedTokenForListing({ tokenId, tierName });
     setIsListModalOpen(true);
   };
 
@@ -393,7 +392,6 @@ export default function TribePage() {
             setSelectedTokenForListing(null);
           }}
           tokenId={selectedTokenForListing.tokenId}
-          tierType={selectedTokenForListing.tierType}
           tierName={selectedTokenForListing.tierName}
           tribeAddress={tribeAddress}
           onSuccess={handleListingSuccess}
@@ -414,33 +412,6 @@ interface UserNFTsSectionProps {
 
 function UserNFTsSection({ userMemberTiers, userBalance, tiers, tribeAddress, userAddress, onListToken }: UserNFTsSectionProps) {
   const totalNFTs = userBalance ? Number(userBalance) : 0;
-  
-  // Fetch user's individual tokens
-  const userTokens = [];
-  for (let i = 0; i < totalNFTs; i++) {
-    const { data: tokenId } = useReadContract({
-      address: tribeAddress,
-      abi: TribeNFTAbi,
-      functionName: "tokenOfOwnerByIndex",
-      args: [userAddress, BigInt(i)],
-    }) as { data: bigint | undefined };
-
-    const { data: tokenTier } = useReadContract({
-      address: tribeAddress,
-      abi: TribeNFTAbi,
-      functionName: "tokenTiers",
-      args: tokenId ? [tokenId] : undefined,
-      query: { enabled: !!tokenId },
-    }) as { data: number | undefined };
-
-    if (tokenId && tokenTier !== undefined) {
-      userTokens.push({
-        tokenId: Number(tokenId),
-        tier: tokenTier as TierType,
-        tierInfo: tiers[tokenTier],
-      });
-    }
-  }
   
   if (totalNFTs === 0) {
     return (
@@ -467,28 +438,15 @@ function UserNFTsSection({ userMemberTiers, userBalance, tiers, tribeAddress, us
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {userTokens.map((token) => (
-          <div
-            key={token.tokenId}
-            className={`bg-gradient-to-r ${token.tierInfo.gradient} border ${token.tierInfo.borderColor} rounded-lg p-4`}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                <div className={`w-6 h-6 rounded-full bg-gradient-to-r ${token.tierInfo.color}`}></div>
-                <span className="font-semibold text-[var(--app-foreground)]">{token.tierInfo.name}</span>
-              </div>
-              <span className="text-sm font-mono text-[var(--app-foreground-muted)]">#{token.tokenId}</span>
-            </div>
-            
-            <Button
-              onClick={() => onListToken(token.tokenId, token.tier, token.tierInfo.name)}
-              variant="secondary"
-              size="sm"
-              className="w-full"
-            >
-              List for Sale
-            </Button>
-          </div>
+        {Array.from({ length: totalNFTs }, (_, index) => (
+          <UserTokenCard
+            key={index}
+            tokenIndex={index}
+            tribeAddress={tribeAddress}
+            userAddress={userAddress}
+            tiers={tiers}
+            onListToken={onListToken}
+          />
         ))}
       </div>
 
@@ -516,6 +474,67 @@ function UserNFTsSection({ userMemberTiers, userBalance, tiers, tribeAddress, us
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+interface UserTokenCardProps {
+  tokenIndex: number;
+  tribeAddress: Address;
+  userAddress: Address;
+  tiers: TierInfo[];
+  onListToken: (tokenId: number, tierType: TierType, tierName: string) => void;
+}
+
+function UserTokenCard({ tokenIndex, tribeAddress, userAddress, tiers, onListToken }: UserTokenCardProps) {
+  // Fetch token ID for this index
+  const { data: tokenId } = useReadContract({
+    address: tribeAddress,
+    abi: TribeNFTAbi,
+    functionName: "tokenOfOwnerByIndex",
+    args: [userAddress, BigInt(tokenIndex)],
+  }) as { data: bigint | undefined };
+
+  // Fetch token tier
+  const { data: tokenTier } = useReadContract({
+    address: tribeAddress,
+    abi: TribeNFTAbi,
+    functionName: "tokenTiers",
+    args: tokenId ? [tokenId] : undefined,
+    query: { enabled: !!tokenId },
+  }) as { data: number | undefined };
+
+  if (!tokenId || tokenTier === undefined) {
+    return (
+      <div className="bg-[var(--app-card-bg)] border border-[var(--app-card-border)] rounded-lg p-4 animate-pulse">
+        <div className="h-4 bg-[var(--app-card-border)] rounded mb-2"></div>
+        <div className="h-8 bg-[var(--app-card-border)] rounded"></div>
+      </div>
+    );
+  }
+
+  const tierInfo = tiers[tokenTier];
+
+  return (
+    <div
+      className={`bg-gradient-to-r ${tierInfo.gradient} border ${tierInfo.borderColor} rounded-lg p-4`}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center space-x-2">
+          <div className={`w-6 h-6 rounded-full bg-gradient-to-r ${tierInfo.color}`}></div>
+          <span className="font-semibold text-[var(--app-foreground)]">{tierInfo.name}</span>
+        </div>
+        <span className="text-sm font-mono text-[var(--app-foreground-muted)]">#{Number(tokenId)}</span>
+      </div>
+      
+      <Button
+        onClick={() => onListToken(Number(tokenId), tokenTier as TierType, tierInfo.name)}
+        variant="secondary"
+        size="sm"
+        className="w-full"
+      >
+        List for Sale
+      </Button>
     </div>
   );
 }

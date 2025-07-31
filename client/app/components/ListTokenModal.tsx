@@ -3,14 +3,13 @@
 import { useState } from "react";
 import { parseEther } from "viem";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { TribeNFTAbi, TierType } from "../../lib/Tribe";
+import { TribeNFTAbi } from "../../lib/Tribe";
 import { Button, Icon } from "./DemoComponents";
 
 interface ListTokenModalProps {
   isOpen: boolean;
   onClose: () => void;
   tokenId: number;
-  tierType: TierType;
   tierName: string;
   tribeAddress: `0x${string}`;
   onSuccess: () => void;
@@ -20,7 +19,6 @@ export function ListTokenModal({
   isOpen,
   onClose,
   tokenId,
-  tierType,
   tierName,
   tribeAddress,
   onSuccess,
