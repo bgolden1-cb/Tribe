@@ -152,6 +152,11 @@ export const TribeNFTAbi = [
         type: "string",
       },
       {
+        internalType: "string",
+        name: "_description",
+        type: "string",
+      },
+      {
         internalType: "address",
         name: "creator",
         type: "address",
@@ -950,6 +955,19 @@ export const TribeNFTAbi = [
       },
     ],
     name: "updatePrice",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "newDescription",
+        type: "string",
+      },
+    ],
+    name: "updateDescription",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",

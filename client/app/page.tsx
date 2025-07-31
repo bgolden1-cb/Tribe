@@ -5,6 +5,7 @@ import {
   useAddFrame,
 } from "@coinbase/onchainkit/minikit";
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { Button } from "./components/DemoComponents";
 import { Icon } from "./components/DemoComponents";
@@ -215,6 +216,7 @@ interface TribeData {
 export default function App() {
   const { setFrameReady, isFrameReady, context } = useMiniKit();
   const { isConnected, address: userAddress } = useAccount();
+  const router = useRouter();
   const [frameAdded, setFrameAdded] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [allTribes, setAllTribes] = useState<Address[]>([]);
@@ -332,12 +334,10 @@ export default function App() {
     setIsCreateModalOpen(false);
   }, []);
 
-  const handleTribeClick = useCallback((tribeId: string) => {
-    // TODO: Navigate to tribe detail page
-    // For now, just log the tribe ID
-    console.log("Navigating to tribe:", tribeId);
-    // In the future, you would navigate to /tribe/${tribeId}
-  }, []);
+  const handleTribeClick = useCallback((tribeAddress: string) => {
+    // Navigate to tribe detail page
+    router.push(`/tribe/${tribeAddress}`);
+  }, [router]);
 
   const saveFrameButton = useMemo(() => {
     if (context && !context.client.added) {
