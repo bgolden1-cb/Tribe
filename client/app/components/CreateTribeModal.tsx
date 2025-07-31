@@ -140,7 +140,7 @@ export function CreateTribeModal({ isOpen, onClose, onCreateTribe, isSubmitting 
                   <label className="block text-sm text-[var(--app-foreground-muted)] mb-1">Price (ETH)</label>
                   <input
                     type="number"
-                    step="0.001"
+                    
                     min="0"
                     value={formData.goldPrice || ''}
                     onChange={(e) => handleInputChange('goldPrice', e.target.value)}
@@ -173,7 +173,7 @@ export function CreateTribeModal({ isOpen, onClose, onCreateTribe, isSubmitting 
                   <label className="block text-sm text-[var(--app-foreground-muted)] mb-1">Price (ETH)</label>
                   <input
                     type="number"
-                    step="0.001"
+                    
                     min="0"
                     value={formData.silverPrice || ''}
                     onChange={(e) => handleInputChange('silverPrice', e.target.value)}
@@ -206,7 +206,7 @@ export function CreateTribeModal({ isOpen, onClose, onCreateTribe, isSubmitting 
                   <label className="block text-sm text-[var(--app-foreground-muted)] mb-1">Price (ETH)</label>
                   <input
                     type="number"
-                    step="0.001"
+                    
                     min="0"
                     value={formData.bronzePrice || ''}
                     onChange={(e) => handleInputChange('bronzePrice', e.target.value)}
