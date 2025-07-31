@@ -1,0 +1,8 @@
+name = "tribe-server"
+main = "src/index.ts"
+compatibility_date = "2024-02-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tribe_benefits"
+database_id = "YOUR_DATABASE_ID"  # You'll get this after creating the database 
