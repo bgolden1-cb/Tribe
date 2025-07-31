@@ -1,7 +1,7 @@
 import { Address } from "viem";
 
 // Contract addresses - Update these with deployed contract addresses
-export const tribeFactoryContract = "0xfCB91ad695F08FF86CE70F816a3D55706075fdb3" as Address; // Deploy TribeFactory contract and add address here
+export const tribeFactoryContract = "0xe95833564e6db5EDB068Ac187719f365f49D3c31" as Address; // Deploy TribeFactory contract and add address here
 
 // Enum for NFT Tiers (matches Solidity enum)
 export enum TierType {
@@ -96,6 +96,19 @@ export const TribeFactoryAbi = [
         internalType: "address",
         name: "",
         type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getTribes",
+    outputs: [
+      {
+        internalType: "address[]",
+        name: "",
+        type: "address[]",
       },
     ],
     stateMutability: "view",

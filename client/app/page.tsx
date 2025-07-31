@@ -44,14 +44,14 @@ export default function App() {
     hash: txHash,
   });
 
-  // Fetch user's tribes from the factory contract
-  // Note: This is a simplified approach. In a real app, you'd want to use events or indexing
+  // Fetch all tribes from the factory contract
   const { data: tribeAddresses, refetch: refetchTribes } = useReadContract({
     address: tribeFactoryContract,
     abi: TribeFactoryAbi,
-    functionName: "tribes",
-    args: [BigInt(0)], // This would need to be enhanced to fetch all tribes
+    functionName: "getTribes",
   });
+
+  console.log("tribeAddresses", tribeAddresses);
 
   useEffect(() => {
     if (!isFrameReady) {
@@ -72,15 +72,12 @@ export default function App() {
     }
   }, [isConfirmed, txHash, refetchTribes]);
 
-  // For demo purposes, add some test tribe addresses
+  // Update tribes when data is fetched from contract
   useEffect(() => {
-    if (isConnected && tribes.length === 0) {
-      // Add some dummy addresses for testing - replace with actual contract addresses
-      setTribes([
-        "0xfCB91ad695F08FF86CE70F816a3D55706075fdb3" as Address,
-      ]);
+    if (tribeAddresses && Array.isArray(tribeAddresses)) {
+      setTribes(tribeAddresses as Address[]);
     }
-  }, [isConnected, tribes.length]);
+  }, [tribeAddresses]);
 
   const handleAddFrame = useCallback(async () => {
     const frameAdded = await addFrame();
@@ -163,11 +160,7 @@ export default function App() {
     return null;
   }, [context, frameAdded, handleAddFrame]);
 
-  const {data: tribesData} = useReadContract({
-    address: tribeFactoryContract,
-    abi: TribeFactoryAbi,
-    functionName: "tribes",
-  });
+
 
   return (
     <>
