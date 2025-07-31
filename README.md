@@ -30,7 +30,7 @@ forge script Deploy \
   --sender 0x62cD4935FDb0d76E3Df9096ACa4aa3E020865863 \
   --broadcast \
   --verify \
-  --verifier-url https://api-sepolia.basescan.org/api \
+  --verifier-url https://api.etherscan.io/api \
   --etherscan-api-key CPZBVWX6UDTIXKFCBMNPM51EKSHGZGEVSP
 ```
 
