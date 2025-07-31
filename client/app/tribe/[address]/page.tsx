@@ -6,6 +6,9 @@ import { Address, formatEther } from "viem";
 import { useState, useEffect } from "react";
 import { TribeNFTAbi, TierType } from "../../../lib/Tribe";
 import { Button, Icon } from "../../components/DemoComponents";
+import { useIsTribeOwner } from "../../hooks/useIsTribeOwner";
+import { CreatePostSection } from "../../components/CreatePostSection";
+import { TribeOwnerStats } from "../../components/TribeOwnerStats";
 
 interface TierInfo {
   name: string;
@@ -39,6 +42,11 @@ const tiers: TierInfo[] = [
   },
 ];
 
+interface PostData {
+  content: string;
+  allowedTiers: TierType[];
+}
+
 export default function TribePage() {
   const params = useParams();
   const router = useRouter();
@@ -46,9 +54,11 @@ export default function TribePage() {
   const [selectedTier, setSelectedTier] = useState<TierType | null>(null);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
   const [refetchTrigger, setRefetchTrigger] = useState(0);
+  const [isCreatingPost, setIsCreatingPost] = useState(false);
 
   const tribeAddress = params.address as Address;
   const { writeContract } = useWriteContract();
+  const { isOwner, isLoading: isOwnerLoading } = useIsTribeOwner(tribeAddress);
 
   // Wait for transaction confirmation
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
@@ -148,6 +158,25 @@ export default function TribePage() {
     router.back();
   };
 
+  const handleCreatePost = async (postData: PostData) => {
+    setIsCreatingPost(true);
+    try {
+      // Here you would implement the post creation logic
+      // For now, we'll just log it
+      console.log("Creating post:", postData);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log("Post created successfully!");
+    } catch (error) {
+      console.error("Error creating post:", error);
+      throw error;
+    } finally {
+      setIsCreatingPost(false);
+    }
+  };
+
   if (!tribeAddress) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -201,36 +230,62 @@ export default function TribePage() {
           </div>
         </div>
 
-        {/* User's NFTs Section */}
-        {isConnected && userAddress && (
-          <UserNFTsSection 
-            userMemberTiers={userMemberTiers}
-            userBalance={userBalance}
-            tiers={tiers}
-          />
+        {/* Conditional Content Based on Ownership */}
+        {isOwnerLoading ? (
+          <div className="bg-[var(--app-card-bg)] border border-[var(--app-card-border)] rounded-xl p-6 mb-8">
+            <div className="text-center py-8">
+              <div className="w-8 h-8 border-2 border-[var(--app-accent)] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-[var(--app-foreground-muted)]">Loading...</p>
+            </div>
+          </div>
+        ) : isOwner ? (
+          /* Owner View */
+          <>
+            {/* Tribe Owner Statistics */}
+            <TribeOwnerStats tribeAddress={tribeAddress} tiers={tiers} />
+            
+            {/* Post Creation Section */}
+            <CreatePostSection 
+              tiers={tiers}
+              onCreatePost={handleCreatePost}
+              isSubmitting={isCreatingPost}
+            />
+          </>
+        ) : (
+          /* Regular User View */
+          <>
+            {/* User's NFTs Section */}
+            {isConnected && userAddress && (
+              <UserNFTsSection 
+                userMemberTiers={userMemberTiers}
+                userBalance={userBalance}
+                tiers={tiers}
+              />
+            )}
+
+            {/* NFT Tiers */}
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-[var(--app-foreground)]">Available NFT Tiers</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {tiers.map((tier) => (
+                  <TierCard
+                    key={tier.type}
+                    tier={tier}
+                    tribeAddress={tribeAddress}
+                    onMint={handleMint}
+                    isLoading={isConfirming && selectedTier === tier.type}
+                    disabled={!isConnected || isConfirming}
+                    refetchTrigger={refetchTrigger}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
         )}
 
-        {/* NFT Tiers */}
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-[var(--app-foreground)]">Available NFT Tiers</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {tiers.map((tier) => (
-              <TierCard
-                key={tier.type}
-                tier={tier}
-                tribeAddress={tribeAddress}
-                onMint={handleMint}
-                isLoading={isConfirming && selectedTier === tier.type}
-                disabled={!isConnected || isConfirming}
-                refetchTrigger={refetchTrigger}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Connection Message */}
-        {!isConnected && (
+        {/* Connection Message - Only for non-owners */}
+        {!isConnected && !isOwner && (
           <div className="mt-8 bg-[var(--app-card-bg)] border border-[var(--app-card-border)] rounded-xl p-6 text-center">
             <Icon name="wallet" size="lg" className="text-[var(--app-foreground-muted)] mx-auto mb-3" />
             <h3 className="text-lg font-semibold text-[var(--app-foreground)] mb-2">
