@@ -539,15 +539,57 @@ function UserTokenCard({ tokenIndex, tribeAddress, userAddress, tiers, onListTok
         <span className="text-sm font-mono text-[var(--app-foreground-muted)]">#{Number(tokenId)}</span>
       </div>
       
-      <Button
-        onClick={() => onListToken(Number(tokenId), tokenTier as TierType, tierInfo.name)}
-        variant="secondary"
-        size="sm"
-        className="w-full"
-      >
-        List for Sale
-      </Button>
+      <UserTokenCardListingCheck
+        tokenId={Number(tokenId)}
+        tokenTier={tokenTier as TierType}
+        tierInfo={tierInfo}
+        tribeAddress={tribeAddress}
+        onListToken={onListToken}
+      />
     </div>
+  );
+}
+
+interface UserTokenCardListingCheckProps {
+  tokenId: number;
+  tokenTier: TierType;
+  tierInfo: TierInfo;
+  tribeAddress: Address;
+  onListToken: (tokenId: number, tierType: TierType, tierName: string) => void;
+}
+
+function UserTokenCardListingCheck({ tokenId, tokenTier, tierInfo, tribeAddress, onListToken }: UserTokenCardListingCheckProps) {
+  // Fetch active listings to check if this specific token is already listed
+  const { data: activeListings } = useReadContract({
+    address: tribeAddress,
+    abi: TribeNFTAbi,
+    functionName: "getActiveListings",
+  }) as { data: readonly bigint[] | undefined };
+
+  // Check if this specific token ID is already in the active listings
+  const isTokenListed = activeListings 
+    ? activeListings.some(listingTokenId => Number(listingTokenId) === tokenId)
+    : false;
+
+  if (isTokenListed) {
+    return (
+      <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-2 text-center">
+        <p className="text-xs text-yellow-800 font-medium">
+          Token already listed
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      onClick={() => onListToken(tokenId, tokenTier, tierInfo.name)}
+      variant="secondary"
+      size="sm"
+      className="w-full"
+    >
+      List for Sale
+    </Button>
   );
 }
 
