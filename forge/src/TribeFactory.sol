@@ -27,5 +27,11 @@ contract TribeFactory {
     function getTribes() public view returns (address[] memory) {
         return tribes;
     }
+
+    function getCreatorTribes(address creator) public view returns (address[] memory) {
+        return creatorTribes[creator];
+    }
+
+  
 }
 
