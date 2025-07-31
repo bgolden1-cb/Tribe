@@ -19,7 +19,7 @@ import { Address, parseEther } from "viem";
 
 interface TribeData {
   name: string;
-  description?: string;
+  description: string;
   goldSupply: number;
   goldPrice: number;
   silverSupply: number;
@@ -104,7 +104,7 @@ export default function App() {
         address: tribeFactoryContract,
         abi: TribeFactoryAbi,
         functionName: "createTribe",
-        args: [tribeData.name, maxSupplies, prices],
+        args: [tribeData.name, tribeData.description, maxSupplies, prices],
       }, {
         onSuccess: (hash) => {
           setTxHash(hash);

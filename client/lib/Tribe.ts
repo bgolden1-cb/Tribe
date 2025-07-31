@@ -13,6 +13,7 @@ export enum TierType {
 // TypeScript interfaces for contract interactions
 export interface TribeCreationParams {
   name: string;
+  description: string;
   maxSupplies: readonly [bigint, bigint, bigint]; // [bronze, silver, gold]
   prices: readonly [bigint, bigint, bigint]; // [bronze, silver, gold] in wei
 }
@@ -20,6 +21,7 @@ export interface TribeCreationParams {
 export interface TribeNFTInfo {
   address: Address;
   name: string;
+  description: string;
   creator: Address;
   maxSupplies: readonly [bigint, bigint, bigint];
   prices: readonly [bigint, bigint, bigint];
@@ -58,6 +60,11 @@ export const TribeFactoryAbi = [
       {
         internalType: "string",
         name: "name",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "description",
         type: "string",
       },
       {

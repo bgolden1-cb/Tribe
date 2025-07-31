@@ -12,7 +12,7 @@ interface CreateTribeModalProps {
 
 interface TribeData {
   name: string;
-  description?: string;
+  description: string;
   goldSupply: number;
   goldPrice: number;
   silverSupply: number;
