@@ -4,11 +4,12 @@ import { useParams, useRouter } from "next/navigation";
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { Address, formatEther } from "viem";
 import { useState, useEffect } from "react";
-import { TribeNFTAbi, TierType } from "../../../lib/Tribe";
+import { TribeNFTAbi, TierType, Listing, ListingWithToken } from "../../../lib/Tribe";
 import { Button, Icon } from "../../components/DemoComponents";
 import { useIsTribeOwner } from "../../hooks/useIsTribeOwner";
 import { CreatePostSection } from "../../components/CreatePostSection";
 import { TribeOwnerStats } from "../../components/TribeOwnerStats";
+import { ListTokenModal } from "../../components/ListTokenModal";
 
 interface TierInfo {
   name: string;
@@ -55,6 +56,15 @@ export default function TribePage() {
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
   const [refetchTrigger, setRefetchTrigger] = useState(0);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
+  
+  // Marketplace state
+  const [isListModalOpen, setIsListModalOpen] = useState(false);
+  const [selectedTokenForListing, setSelectedTokenForListing] = useState<{
+    tokenId: number;
+    tierType: TierType;
+    tierName: string;
+  } | null>(null);
+  const [marketplaceRefetch, setMarketplaceRefetch] = useState(0);
 
   const tribeAddress = params.address as Address;
   const { writeContract } = useWriteContract();
@@ -104,6 +114,16 @@ export default function TribePage() {
       enabled: !!userAddress && !!isConnected,
     },
   }) as { data: bigint | undefined };
+
+  // Fetch marketplace data
+  const { data: activeListings, refetch: refetchListings } = useReadContract({
+    address: tribeAddress,
+    abi: TribeNFTAbi,
+    functionName: "getActiveListings",
+    query: {
+      refetchInterval: 10000, // Refetch every 10 seconds
+    },
+  }) as { data: readonly bigint[] | undefined; refetch: () => void };
 
   // Handle successful mint
   useEffect(() => {
@@ -175,6 +195,50 @@ export default function TribePage() {
     } finally {
       setIsCreatingPost(false);
     }
+  };
+
+  // Marketplace handlers
+  const handleListToken = (tokenId: number, tierType: TierType, tierName: string) => {
+    setSelectedTokenForListing({ tokenId, tierType, tierName });
+    setIsListModalOpen(true);
+  };
+
+  const handleBuyToken = async (tokenId: bigint, price: bigint) => {
+    if (!isConnected) {
+      alert("Please connect your wallet first");
+      return;
+    }
+
+    try {
+      writeContract({
+        address: tribeAddress,
+        abi: TribeNFTAbi,
+        functionName: "buyToken",
+        args: [tokenId],
+        value: price,
+      }, {
+        onSuccess: (hash) => {
+          console.log("Buy token transaction submitted:", hash);
+          // Refresh marketplace data
+          refetchListings();
+          refetchUserNFTs();
+          setMarketplaceRefetch(prev => prev + 1);
+        },
+        onError: (error) => {
+          console.error("Buy token failed:", error);
+          alert("Failed to buy token: " + error.message);
+        }
+      });
+    } catch (error) {
+      console.error("Error buying token:", error);
+      alert("Error buying token: " + (error as Error).message);
+    }
+  };
+
+  const handleListingSuccess = () => {
+    refetchListings();
+    refetchUserNFTs();
+    setMarketplaceRefetch(prev => prev + 1);
   };
 
   if (!tribeAddress) {
@@ -269,6 +333,9 @@ export default function TribePage() {
                 userMemberTiers={userMemberTiers}
                 userBalance={userBalance}
                 tiers={tiers}
+                tribeAddress={tribeAddress}
+                userAddress={userAddress}
+                onListToken={handleListToken}
               />
             )}
 
@@ -290,6 +357,16 @@ export default function TribePage() {
                 ))}
               </div>
             </div>
+
+            {/* After Market Section */}
+            <AfterMarketSection
+              tribeAddress={tribeAddress}
+              activeListings={activeListings}
+              userAddress={userAddress}
+              tiers={tiers}
+              onBuyToken={handleBuyToken}
+              refetchTrigger={marketplaceRefetch}
+            />
           </>
         )}
 
@@ -306,6 +383,22 @@ export default function TribePage() {
           </div>
         )}
       </div>
+
+      {/* List Token Modal */}
+      {selectedTokenForListing && (
+        <ListTokenModal
+          isOpen={isListModalOpen}
+          onClose={() => {
+            setIsListModalOpen(false);
+            setSelectedTokenForListing(null);
+          }}
+          tokenId={selectedTokenForListing.tokenId}
+          tierType={selectedTokenForListing.tierType}
+          tierName={selectedTokenForListing.tierName}
+          tribeAddress={tribeAddress}
+          onSuccess={handleListingSuccess}
+        />
+      )}
     </div>
   );
 }
@@ -314,10 +407,40 @@ interface UserNFTsSectionProps {
   userMemberTiers: readonly [bigint, bigint, bigint] | undefined;
   userBalance: bigint | undefined;
   tiers: TierInfo[];
+  tribeAddress: Address;
+  userAddress: Address;
+  onListToken: (tokenId: number, tierType: TierType, tierName: string) => void;
 }
 
-function UserNFTsSection({ userMemberTiers, userBalance, tiers }: UserNFTsSectionProps) {
+function UserNFTsSection({ userMemberTiers, userBalance, tiers, tribeAddress, userAddress, onListToken }: UserNFTsSectionProps) {
   const totalNFTs = userBalance ? Number(userBalance) : 0;
+  
+  // Fetch user's individual tokens
+  const userTokens = [];
+  for (let i = 0; i < totalNFTs; i++) {
+    const { data: tokenId } = useReadContract({
+      address: tribeAddress,
+      abi: TribeNFTAbi,
+      functionName: "tokenOfOwnerByIndex",
+      args: [userAddress, BigInt(i)],
+    }) as { data: bigint | undefined };
+
+    const { data: tokenTier } = useReadContract({
+      address: tribeAddress,
+      abi: TribeNFTAbi,
+      functionName: "tokenTiers",
+      args: tokenId ? [tokenId] : undefined,
+      query: { enabled: !!tokenId },
+    }) as { data: number | undefined };
+
+    if (tokenId && tokenTier !== undefined) {
+      userTokens.push({
+        tokenId: Number(tokenId),
+        tier: tokenTier as TierType,
+        tierInfo: tiers[tokenTier],
+      });
+    }
+  }
   
   if (totalNFTs === 0) {
     return (
@@ -343,36 +466,55 @@ function UserNFTsSection({ userMemberTiers, userBalance, tiers }: UserNFTsSectio
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {tiers.map((tier, index) => {
-          const count = userMemberTiers ? Number(userMemberTiers[index]) : 0;
-          
-          return (
-            <div 
-              key={tier.type}
-              className={`bg-gradient-to-r ${tier.gradient} border ${tier.borderColor} rounded-lg p-4`}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {userTokens.map((token) => (
+          <div
+            key={token.tokenId}
+            className={`bg-gradient-to-r ${token.tierInfo.gradient} border ${token.tierInfo.borderColor} rounded-lg p-4`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <div className={`w-6 h-6 rounded-full bg-gradient-to-r ${token.tierInfo.color}`}></div>
+                <span className="font-semibold text-[var(--app-foreground)]">{token.tierInfo.name}</span>
+              </div>
+              <span className="text-sm font-mono text-[var(--app-foreground-muted)]">#{token.tokenId}</span>
+            </div>
+            
+            <Button
+              onClick={() => onListToken(token.tokenId, token.tier, token.tierInfo.name)}
+              variant="secondary"
+              size="sm"
+              className="w-full"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-6 h-6 rounded-full bg-gradient-to-r ${tier.color}`}></div>
-                  <span className="font-semibold text-[var(--app-foreground)]">{tier.name}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-2xl font-bold text-[var(--app-foreground)]">{count}</span>
-                  <p className="text-xs text-[var(--app-foreground-muted)]">owned</p>
+              List for Sale
+            </Button>
+          </div>
+        ))}
+      </div>
+
+      {/* Summary by tier */}
+      <div className="mt-6 pt-6 border-t border-[var(--app-card-border)]">
+        <h3 className="text-lg font-semibold text-[var(--app-foreground)] mb-4">Membership Summary</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {tiers.map((tier, index) => {
+            const count = userMemberTiers ? Number(userMemberTiers[index]) : 0;
+            
+            return (
+              <div 
+                key={tier.type}
+                className={`bg-gradient-to-r ${tier.gradient} border ${tier.borderColor} rounded-lg p-3`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-4 h-4 rounded-full bg-gradient-to-r ${tier.color}`}></div>
+                    <span className="font-medium text-[var(--app-foreground)]">{tier.name}</span>
+                  </div>
+                  <span className="text-lg font-bold text-[var(--app-foreground)]">{count}</span>
                 </div>
               </div>
-              
-              {count > 0 && (
-                <div className="mt-2 pt-2 border-t border-current border-opacity-20">
-                  <p className="text-xs text-[var(--app-foreground-muted)]">
-                    You are a {tier.name} member of this tribe!
-                  </p>
-                </div>
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -494,6 +636,155 @@ function TierCard({ tier, tribeAddress, onMint, isLoading, disabled, refetchTrig
           `Mint ${tier.name} NFT`
         )}
       </Button>
+    </div>
+  );
+}
+
+interface AfterMarketSectionProps {
+  tribeAddress: Address;
+  activeListings: readonly bigint[] | undefined;
+  userAddress: Address | undefined;
+  tiers: TierInfo[];
+  onBuyToken: (tokenId: bigint, price: bigint) => void;
+  refetchTrigger: number;
+}
+
+function AfterMarketSection({ tribeAddress, activeListings, userAddress, tiers, onBuyToken, refetchTrigger }: AfterMarketSectionProps) {
+  if (!activeListings || activeListings.length === 0) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-[var(--app-foreground)]">After Market</h2>
+        <div className="bg-[var(--app-card-bg)] border border-[var(--app-card-border)] rounded-xl p-6">
+          <div className="text-center py-8">
+            <Icon name="wallet" size="lg" className="text-[var(--app-foreground-muted)] mx-auto mb-3" />
+            <p className="text-[var(--app-foreground-muted)]">
+              No NFTs are currently listed for sale in this tribe.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 mt-6">
+      <h2 className="text-2xl font-bold text-[var(--app-foreground)]">After Market</h2>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {activeListings.map((tokenId) => (
+          <MarketplaceCard
+            key={Number(tokenId)}
+            tokenId={tokenId}
+            tribeAddress={tribeAddress}
+            userAddress={userAddress}
+            tiers={tiers}
+            onBuyToken={onBuyToken}
+            refetchTrigger={refetchTrigger}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface MarketplaceCardProps {
+  tokenId: bigint;
+  tribeAddress: Address;
+  userAddress: Address | undefined;
+  tiers: TierInfo[];
+  onBuyToken: (tokenId: bigint, price: bigint) => void;
+  refetchTrigger: number;
+}
+
+function MarketplaceCard({ tokenId, tribeAddress, userAddress, tiers, onBuyToken, refetchTrigger }: MarketplaceCardProps) {
+  // Fetch listing details
+  const { data: listing, refetch: refetchListing } = useReadContract({
+    address: tribeAddress,
+    abi: TribeNFTAbi,
+    functionName: "getListing",
+    args: [tokenId],
+  }) as { data: Listing | undefined; refetch: () => void };
+
+  // Fetch token tier
+  const { data: tokenTier } = useReadContract({
+    address: tribeAddress,
+    abi: TribeNFTAbi,
+    functionName: "tokenTiers",
+    args: [tokenId],
+  }) as { data: number | undefined };
+
+  // Refetch when refetchTrigger changes
+  useEffect(() => {
+    if (refetchTrigger > 0) {
+      refetchListing();
+    }
+  }, [refetchTrigger, refetchListing]);
+
+  if (!listing || !listing.active || tokenTier === undefined) {
+    return null;
+  }
+
+  // Check if listing is expired
+  const currentTime = Math.floor(Date.now() / 1000);
+  const isExpired = Number(listing.expiration) <= currentTime;
+  
+  if (isExpired) {
+    return null;
+  }
+
+  const tierInfo = tiers[tokenTier];
+  const isOwnListing = userAddress && listing.seller.toLowerCase() === userAddress.toLowerCase();
+  const priceInEth = formatEther(listing.price);
+
+  return (
+    <div className={`bg-gradient-to-r ${tierInfo.gradient} border ${tierInfo.borderColor} rounded-xl p-6 space-y-4`}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className={`w-8 h-8 rounded-full bg-gradient-to-r ${tierInfo.color}`}></div>
+          <div>
+            <h3 className="text-lg font-bold text-[var(--app-foreground)]">{tierInfo.name} NFT</h3>
+            <p className="text-sm font-mono text-[var(--app-foreground-muted)]">#{Number(tokenId)}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Price and seller */}
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <span className="text-[var(--app-foreground-muted)]">Price:</span>
+          <span className="text-xl font-bold text-[var(--app-foreground)]">{priceInEth} ETH</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-[var(--app-foreground-muted)]">Seller:</span>
+          <span className="text-sm font-mono text-[var(--app-foreground)]">
+            {listing.seller.slice(0, 6)}...{listing.seller.slice(-4)}
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-[var(--app-foreground-muted)]">Expires:</span>
+          <span className="text-sm text-[var(--app-foreground)]">
+            {new Date(Number(listing.expiration) * 1000).toLocaleDateString()}
+          </span>
+        </div>
+      </div>
+
+      {/* Buy button */}
+      {isOwnListing ? (
+        <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-3 text-center">
+          <p className="text-sm text-yellow-800 font-medium">Your Listing</p>
+        </div>
+      ) : (
+        <Button
+          onClick={() => onBuyToken(tokenId, listing.price)}
+          variant="primary"
+          size="lg"
+          className="w-full"
+          disabled={!userAddress}
+        >
+          {!userAddress ? "Connect Wallet" : `Buy for ${priceInEth} ETH`}
+        </Button>
+      )}
     </div>
   );
 }
