@@ -12,6 +12,7 @@ contract TribeNFT is ERC721, ERC721Enumerable, Ownable {
     uint256[3] public prices; // in wei (ETH)
     uint256[3] public currentSupplies;
     mapping(uint256 => Tier) public tokenTiers;
+    mapping(address => mapping(Tier => uint256)) public memberTiers;
     uint256 private nextTokenId = 1;
 
     constructor(
@@ -24,6 +25,10 @@ contract TribeNFT is ERC721, ERC721Enumerable, Ownable {
         prices = _prices;
     }
 
+    function getMemberTiers(address user) public view returns (uint256[3] memory) {
+        return [memberTiers[user][Tier.Bronze], memberTiers[user][Tier.Silver], memberTiers[user][Tier.Gold]];
+    }
+
     function mint(Tier tier) public payable {
         uint8 t = uint8(tier);
         require(currentSupplies[t] < maxSupplies[t], "Max supply reached for tier");
@@ -32,6 +37,7 @@ contract TribeNFT is ERC721, ERC721Enumerable, Ownable {
         uint256 tokenId = nextTokenId++;
         tokenTiers[tokenId] = tier;
         currentSupplies[t]++;
+        memberTiers[msg.sender][tier]++;
         _safeMint(msg.sender, tokenId);
 
         // Forward payment to the tribe creator (owner)
