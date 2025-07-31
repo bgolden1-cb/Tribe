@@ -15,45 +15,46 @@ import { Footer } from "./components/Footer";
 import { MyTribes } from "./components/MyTribes";
 import { CreateTribeModal } from "./components/CreateTribeModal";
 import { TribeFactoryAbi, TribeNFTAbi, tribeFactoryContract } from "../lib/Tribe";
+import { TribeCardSkeleton } from "./components/DemoComponents";
 
 import { Address, parseEther } from "viem";
 
 const TribeCard = ({ address, onTribeClick }: { address: Address; onTribeClick?: (tribeId: string) => void }) => {
   // Fetch tribe name
-  const { data: tribeName } = useReadContract({
+  const { data: tribeName, isLoading: isNameLoading } = useReadContract({
     address: address,
     abi: TribeNFTAbi,
     functionName: "name",
   });
 
   // Fetch tribe description
-  const { data: tribeDescription } = useReadContract({
+  const { data: tribeDescription, isLoading: isDescLoading } = useReadContract({
     address: address,
     abi: TribeNFTAbi,
     functionName: "description",
   });
 
   // Fetch max supplies for each tier
-  const { data: maxSupplies } = useReadContract({
+  const { data: maxSupplies, isLoading: isBronzeMaxLoading } = useReadContract({
     address: address,
     abi: TribeNFTAbi,
     functionName: "maxSupplies",
     args: [BigInt(0)], // Bronze
-  }) as { data: bigint | undefined };
+  }) as { data: bigint | undefined; isLoading: boolean };
 
-  const { data: silverMaxSupply } = useReadContract({
+  const { data: silverMaxSupply, isLoading: isSilverMaxLoading } = useReadContract({
     address: address,
     abi: TribeNFTAbi,
     functionName: "maxSupplies",
     args: [BigInt(1)], // Silver
-  }) as { data: bigint | undefined };
+  }) as { data: bigint | undefined; isLoading: boolean };
 
-  const { data: goldMaxSupply } = useReadContract({
+  const { data: goldMaxSupply, isLoading: isGoldMaxLoading } = useReadContract({
     address: address,
     abi: TribeNFTAbi,
     functionName: "maxSupplies",
     args: [BigInt(2)], // Gold
-  }) as { data: bigint | undefined };
+  }) as { data: bigint | undefined; isLoading: boolean };
 
   // Fetch current supplies for each tier
   const { data: bronzeCurrentSupply } = useReadContract({
@@ -107,6 +108,13 @@ const TribeCard = ({ address, onTribeClick }: { address: Address; onTribeClick?:
     if (!priceInWei) return "0";
     return (Number(priceInWei) / 1e18).toFixed(4);
   };
+
+  // Check if any critical data is still loading
+  const isLoading = isNameLoading || isDescLoading || isBronzeMaxLoading || isSilverMaxLoading || isGoldMaxLoading;
+
+  if (isLoading) {
+    return <TribeCardSkeleton />;
+  }
 
   return (
     <div
@@ -233,14 +241,14 @@ export default function App() {
   });
 
   // Fetch all tribes from the factory contract
-  const { data: allTribeAddresses, refetch: refetchAllTribes } = useReadContract({
+  const { data: allTribeAddresses, refetch: refetchAllTribes, isLoading: isAllTribesLoading } = useReadContract({
     address: tribeFactoryContract,
     abi: TribeFactoryAbi,
     functionName: "getTribes",
   });
 
   // Fetch tribes created by the current user
-  const { data: creatorTribeAddresses, refetch: refetchCreatorTribes } = useReadContract({
+  const { data: creatorTribeAddresses, refetch: refetchCreatorTribes, isLoading: isCreatorTribesLoading } = useReadContract({
     address: tribeFactoryContract,
     abi: TribeFactoryAbi,
     functionName: "getCreatorTribes",
@@ -434,7 +442,13 @@ export default function App() {
                       </p>
                     </div>
                     
-                    {allTribes.length === 0 ? (
+                    {isAllTribesLoading ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {[1, 2, 3, 4].map((i) => (
+                          <TribeCardSkeleton key={i} />
+                        ))}
+                      </div>
+                    ) : allTribes.length === 0 ? (
                       <div className="flex flex-col items-center justify-center min-h-[40vh] text-center space-y-6">
                         <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[var(--app-accent)] to-blue-500 flex items-center justify-center">
                           <Icon name="users" size="lg" className="text-white" />

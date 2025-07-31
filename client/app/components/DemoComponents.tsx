@@ -512,3 +512,86 @@ function TransactionCard() {
     </Card>
   );
 }
+
+export const Skeleton = ({ 
+  className = "", 
+  width, 
+  height 
+}: { 
+  className?: string; 
+  width?: string | number;
+  height?: string | number;
+}) => {
+  return (
+    <div 
+      className={`animate-shimmer bg-gradient-to-r from-[var(--app-card-bg)] via-[var(--app-card-border)] to-[var(--app-card-bg)] bg-[length:200%_100%] rounded-md ${className}`}
+      style={{ width, height }}
+    />
+  );
+};
+
+export const TribeCardSkeleton = () => {
+  return (
+    <div className="bg-[var(--app-card-bg)] border border-[var(--app-card-border)] rounded-xl p-6">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <Skeleton width={48} height={48} className="rounded-xl" />
+          <div>
+            <Skeleton width={120} height={20} className="mb-2" />
+            <Skeleton width={180} height={16} className="mb-1" />
+            <Skeleton width={100} height={14} />
+          </div>
+        </div>
+        <div className="text-right">
+          <Skeleton width={80} height={14} className="mb-1" />
+          <Skeleton width={40} height={20} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="bg-gradient-to-r from-gray-500/10 to-gray-600/10 border border-gray-500/20 rounded-lg p-3">
+            <div className="flex items-center space-x-2 mb-2">
+              <Skeleton width={16} height={16} className="rounded-full" />
+              <Skeleton width={50} height={16} />
+            </div>
+            <div className="space-y-1">
+              <Skeleton width={60} height={12} />
+              <Skeleton width={70} height={16} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-center mt-4 pt-4 border-t border-[var(--app-card-border)]">
+        <Skeleton width={200} height={16} />
+      </div>
+    </div>
+  );
+};
+
+export const TierCardSkeleton = () => {
+  return (
+    <div className="bg-gradient-to-r from-gray-500/10 to-gray-600/10 border border-gray-500/20 rounded-xl p-6 space-y-4">
+      <div className="flex items-center space-x-3">
+        <Skeleton width={32} height={32} className="rounded-full" />
+        <Skeleton width={100} height={24} />
+      </div>
+      
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <Skeleton width={70} height={16} />
+          <Skeleton width={80} height={16} />
+        </div>
+        <div className="flex justify-between items-center">
+          <Skeleton width={50} height={16} />
+          <Skeleton width={70} height={16} />
+        </div>
+      </div>
+      
+      <Skeleton height={8} className="rounded-full" />
+      
+      <Skeleton height={48} className="rounded-lg" />
+    </div>
+  );
+};
