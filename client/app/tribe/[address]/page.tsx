@@ -227,6 +227,15 @@ export default function TribePage() {
                 </div>
               </div>
             </div>
+            <Button
+              onClick={() => router.push(`/tribe/${tribeAddress}/content`)}
+              variant="primary"
+              size="md"
+              className="flex items-center space-x-2"
+            >
+              <Icon name="star" size="sm" />
+              <span>View Content</span>
+            </Button>
           </div>
         </div>
 

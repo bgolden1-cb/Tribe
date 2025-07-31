@@ -48,18 +48,7 @@ export function Navbar({ onCreateTribe }: NavbarProps) {
 
           {/* Right side - Wallet and Create button */}
           <div className="flex items-center space-x-4">
-            {/* Create Tribe Button - only show when connected */}
-            {isConnected && (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={onCreateTribe}
-                className="hidden sm:flex items-center space-x-2 bg-gradient-to-r from-[var(--app-accent)] to-blue-500 hover:from-[var(--app-accent-hover)] hover:to-blue-600 shadow-lg hover:shadow-xl transition-all duration-200"
-                icon={<Icon name="users" size="sm" />}
-              >
-                Create Tribe
-              </Button>
-            )}
+  
 
             {/* Wallet Connection */}
             <div className="flex items-center">

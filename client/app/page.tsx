@@ -372,7 +372,7 @@ export default function App() {
     <>
       <div className={`flex flex-col min-h-screen font-sans text-[var(--app-foreground)] mini-app-theme from-[var(--app-background)] to-[var(--app-gray)] ${isCreateModalOpen ? 'blur-sm' : ''}`}>
         {/* New Modern Navbar */}
-        <Navbar onCreateTribe={handleOpenCreateModal} />
+        <Navbar />
         
         {/* Main Content */}
         <div className={`flex-1 w-full mx-auto ${!isConnected ? '' : 'max-w-4xl px-4 py-6'}`}>
