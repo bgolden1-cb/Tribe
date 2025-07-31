@@ -725,7 +725,7 @@ interface AfterMarketSectionProps {
 function AfterMarketSection({ tribeAddress, activeListings, userAddress, tiers, onBuyToken, refetchTrigger }: AfterMarketSectionProps) {
   if (!activeListings || activeListings.length === 0) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 mt-6">
         <h2 className="text-2xl font-bold text-[var(--app-foreground)]">After Market</h2>
         <div className="bg-[var(--app-card-bg)] border border-[var(--app-card-border)] rounded-xl p-6">
           <div className="text-center py-8">
