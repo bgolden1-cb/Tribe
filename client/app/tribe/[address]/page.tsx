@@ -180,14 +180,26 @@ export default function TribePage() {
   const handleCreatePost = async (postData: PostData) => {
     setIsCreatingPost(true);
     try {
-      // Here you would implement the post creation logic
-      // For now, we'll just log it
-      console.log("Creating post:", postData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log("Post created successfully!");
+      const response = await fetch('http://localhost:4000/api/benefit/multi', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tribe: tribeAddress,
+          benefit_text: postData.content,
+          tiers: postData.allowedTiers
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to create post: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log("Post created successfully:", result);
+
     } catch (error) {
       console.error("Error creating post:", error);
       throw error;
