@@ -248,7 +248,7 @@ export default function App() {
   });
 
   // Fetch tribes created by the current user
-  const { data: creatorTribeAddresses, refetch: refetchCreatorTribes, isLoading: isCreatorTribesLoading } = useReadContract({
+  const { data: creatorTribeAddresses, refetch: refetchCreatorTribes } = useReadContract({
     address: tribeFactoryContract,
     abi: TribeFactoryAbi,
     functionName: "getCreatorTribes",
