@@ -47,15 +47,6 @@ export function MyTribes({ tribes, onCreateTribe, onTribeClick }: MyTribesProps)
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[var(--app-foreground)]">My Tribes</h1>
-        <button
-          onClick={onCreateTribe}
-          className="bg-gradient-to-r from-[var(--app-accent)] to-blue-500 hover:from-[var(--app-accent-hover)] hover:to-blue-600 text-white font-medium px-4 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
-        >
-          <div className="flex items-center space-x-2">
-            <Icon name="plus" size="sm" />
-            <span>New Tribe</span>
-          </div>
-        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
