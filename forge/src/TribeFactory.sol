@@ -5,7 +5,8 @@ import "./TribeNFT.sol";
 
 contract TribeFactory {
 
-    // Add a mapping to track all tribes
+    // Add a list to track all tribes
+    address[] public tribes;
 
     event TribeCreated(address tribeAddress, address creator, string name);
 
@@ -15,6 +16,7 @@ contract TribeFactory {
         uint256[3] memory prices // [bronze, silver, gold] in wei
     ) public returns (address) {
         TribeNFT tribe = new TribeNFT(name, msg.sender, maxSupplies, prices);
+        tribes.push(address(tribe));
         emit TribeCreated(address(tribe), msg.sender, name);
         return address(tribe);
     }
