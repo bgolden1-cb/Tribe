@@ -9,7 +9,7 @@ const db = connectToDatabase();
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'],
+  origin: ['http://localhost:5173', 'http://localhost:3000', '*', 'https://base-tribe.vercel.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 }));
 app.use(express.json());
