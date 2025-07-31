@@ -72,7 +72,7 @@ export default function ContentPage() {
       setIsLoading(true);
       setError(null);
       
-      fetch(`https://tribe.brightsideserve.com/api/benefits?contract=${tribeAddress}&address=${userAddress}`)
+      fetch(`http://localhost:4000/api/benefits?contract=${tribeAddress}&address=${userAddress}`)
         .then(res => {
           if (!res.ok) {
             throw new Error('Failed to fetch benefits');
