@@ -23,5 +23,9 @@ contract TribeFactory {
         emit TribeCreated(address(tribe), msg.sender, name, description);
         return address(tribe);
     }
+
+    function getTribes() public view returns (address[] memory) {
+        return tribes;
+    }
 }
 
