@@ -3,51 +3,29 @@
 import { useParams, useRouter } from "next/navigation";
 import { useAccount, useReadContract } from "wagmi";
 import { Address } from "viem";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TribeNFTAbi, TierType } from "../../../../lib/Tribe";
 import { Button, Icon } from "../../../components/DemoComponents";
 
-interface TierContent {
-  name: string;
-  type: TierType;
-  color: string;
-  gradient: string;
-  borderColor: string;
-  content: {
-    title: string;
-    description: string;
-    sections: {
-      title: string;
-      content: string;
-    }[];
+interface BenefitsResponse {
+  tribe: {
+    address: string;
+  };
+  tierCounts: string[];
+  benefits: {
+    [key: string]: string[];
   };
 }
 
-const tierContents: TierContent[] = [
+const tierInfo = [
   {
     name: "Bronze",
     type: TierType.Bronze,
     color: "from-amber-600 to-amber-800",
     gradient: "from-amber-600/10 to-amber-700/10",
     borderColor: "border-amber-600/20",
-    content: {
-      title: "Bronze Member Exclusive Content",
-      description: "Welcome to the Bronze tier! Access foundational knowledge and community updates.",
-      sections: [
-        {
-          title: "Community Updates",
-          content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur."
-        },
-        {
-          title: "Getting Started Guide",
-          content: "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo."
-        },
-        {
-          title: "Basic Resources",
-          content: "Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt."
-        }
-      ]
-    }
+    title: "Bronze Member Exclusive Content",
+    description: "Welcome to the Bronze tier! Access foundational knowledge and community updates."
   },
   {
     name: "Silver",
@@ -55,28 +33,8 @@ const tierContents: TierContent[] = [
     color: "from-gray-400 to-gray-600",
     gradient: "from-gray-400/10 to-gray-500/10",
     borderColor: "border-gray-400/20",
-    content: {
-      title: "Silver Member Premium Content",
-      description: "Silver tier members enjoy advanced insights, exclusive tutorials, and priority support.",
-      sections: [
-        {
-          title: "Advanced Strategies",
-          content: "At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga."
-        },
-        {
-          title: "Exclusive Tutorials",
-          content: "Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet."
-        },
-        {
-          title: "Market Analysis",
-          content: "Ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat. Integer posuere erat a ante venenatis dapibus posuere velit aliquet. Donec sed odio dui. Etiam porta sem malesuada magna mollis euismod. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh."
-        },
-        {
-          title: "Priority Support Access",
-          content: "Ut fermentum massa justo sit amet risus. Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Vivamus sagittis lacus vel augue laoreet rutrum faucibus dolor auctor."
-        }
-      ]
-    }
+    title: "Silver Member Premium Content",
+    description: "Silver tier members enjoy advanced insights, exclusive tutorials, and priority support."
   },
   {
     name: "Gold",
@@ -84,32 +42,8 @@ const tierContents: TierContent[] = [
     color: "from-yellow-400 to-yellow-600",
     gradient: "from-yellow-500/10 to-yellow-600/10",
     borderColor: "border-yellow-500/20",
-    content: {
-      title: "Gold Member Elite Content",
-      description: "The ultimate tier with exclusive access to insider information, private events, and direct leadership contact.",
-      sections: [
-        {
-          title: "Insider Information",
-          content: "Nullam quis risus eget urna mollis ornare vel eu leo. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Nullam id dolor id nibh ultricies vehicula ut id elit. Donec ullamcorper nulla non metus auctor fringilla. Duis mollis, est non commodo luctus, nisi erat porttitor ligula, eget lacinia odio sem nec elit."
-        },
-        {
-          title: "Private Event Access",
-          content: "Sed posuere consectetur est at lobortis. Aenean lacinia bibendum nulla sed consectetur. Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Donec sed odio dui. Donec ullamcorper nulla non metus auctor fringilla. Vestibulum id ligula porta felis euismod semper."
-        },
-        {
-          title: "Executive Insights",
-          content: "Maecenas sed diam eget risus varius blandit sit amet non magna. Cras mattis consectetur purus sit amet fermentum. Sed posuere consectetur est at lobortis. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus."
-        },
-        {
-          title: "Direct Leadership Contact",
-          content: "Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Etiam porta sem malesuada magna mollis euismod. Cras justo odio, dapibus ac facilisis in, egestas eget quam. Nullam quis risus eget urna mollis ornare vel eu leo. Donec id elit non mi porta gravida at eget metus."
-        },
-        {
-          title: "Exclusive Investment Opportunities",
-          content: "Integer posuere erat a ante venenatis dapibus posuere velit aliquet. Donec sed odio dui. Etiam porta sem malesuada magna mollis euismod. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Morbi leo risus, porta ac consectetur ac, vestibulum at eros."
-        }
-      ]
-    }
+    title: "Gold Member Elite Content",
+    description: "The ultimate tier with exclusive access to insider information, private events, and direct leadership contact."
   }
 ];
 
@@ -117,6 +51,9 @@ export default function ContentPage() {
   const params = useParams();
   const router = useRouter();
   const { isConnected, address: userAddress } = useAccount();
+  const [benefitsData, setBenefitsData] = useState<BenefitsResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const tribeAddress = params.address as Address;
 
@@ -127,16 +64,32 @@ export default function ContentPage() {
     functionName: "name",
   });
 
-  // Fetch user's tier membership
-  const { data: userMemberTiers } = useReadContract({
-    address: tribeAddress,
-    abi: TribeNFTAbi,
-    functionName: "getMemberTiers",
-    args: userAddress ? [userAddress] : undefined,
-    query: {
-      enabled: !!userAddress && !!isConnected,
-    },
-  }) as { data: readonly [bigint, bigint, bigint] | undefined };
+
+
+  // Fetch benefits data from API
+  useEffect(() => {
+    if (tribeAddress && userAddress && isConnected) {
+      setIsLoading(true);
+      setError(null);
+      
+      fetch(`https://tribe.brightsideserve.com/api/benefits?contract=${tribeAddress}&address=${userAddress}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Failed to fetch benefits');
+          }
+          return res.json();
+        })
+        .then(data => {
+          setBenefitsData(data);
+          setIsLoading(false);
+        })
+        .catch(err => {
+          console.error('Error fetching benefits:', err);
+          setError(err.message);
+          setIsLoading(false);
+        });
+    }
+  }, [tribeAddress, userAddress, isConnected]);
 
   const handleGoBack = () => {
     router.back();
@@ -144,8 +97,8 @@ export default function ContentPage() {
 
   // Check if user has access to a specific tier
   const hasAccess = (tierType: TierType): boolean => {
-    if (!userMemberTiers) return false;
-    return Number(userMemberTiers[tierType]) > 0;
+    if (!benefitsData || !benefitsData.tierCounts) return false;
+    return Number(benefitsData.tierCounts[tierType]) > 0;
   };
 
   if (!tribeAddress) {
@@ -200,14 +153,30 @@ export default function ContentPage() {
           </div>
         )}
 
+        {/* Loading State */}
+        {isConnected && isLoading && (
+          <div className="bg-[var(--app-card-bg)] border border-[var(--app-card-border)] rounded-xl p-8 text-center">
+            <p className="text-[var(--app-foreground-muted)]">Loading benefits...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {isConnected && error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+            <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Benefits</h3>
+            <p className="text-red-600">{error}</p>
+          </div>
+        )}
+
         {/* Tier Content */}
-        {isConnected && (
+        {isConnected && !isLoading && !error && (
           <div className="space-y-8">
-            {tierContents.map((tierContent) => (
+            {tierInfo.map((tier) => (
               <TierContentCard
-                key={tierContent.type}
-                tierContent={tierContent}
-                hasAccess={hasAccess(tierContent.type)}
+                key={tier.type}
+                tierInfo={tier}
+                hasAccess={hasAccess(tier.type)}
+                benefits={benefitsData?.benefits?.[tier.type.toString()] || []}
               />
             ))}
           </div>
@@ -218,26 +187,27 @@ export default function ContentPage() {
 }
 
 interface TierContentCardProps {
-  tierContent: TierContent;
+  tierInfo: typeof tierInfo[0];
   hasAccess: boolean;
+  benefits: string[];
 }
 
-function TierContentCard({ tierContent, hasAccess }: TierContentCardProps) {
+function TierContentCard({ tierInfo, hasAccess, benefits }: TierContentCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className={`bg-gradient-to-r ${tierContent.gradient} border ${tierContent.borderColor} rounded-xl overflow-hidden`}>
+    <div className={`bg-gradient-to-r ${tierInfo.gradient} border ${tierInfo.borderColor} rounded-xl overflow-hidden`}>
       {/* Header */}
       <div className="p-6 border-b border-current border-opacity-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className={`w-10 h-10 rounded-full bg-gradient-to-r ${tierContent.color}`}></div>
+            <div className={`w-10 h-10 rounded-full bg-gradient-to-r ${tierInfo.color}`}></div>
             <div>
               <h2 className="text-xl font-bold text-[var(--app-foreground)]">
-                {tierContent.content.title}
+                {tierInfo.title}
               </h2>
               <p className="text-[var(--app-foreground-muted)] text-sm">
-                {tierContent.content.description}
+                {tierInfo.description}
               </p>
             </div>
           </div>
@@ -274,41 +244,140 @@ function TierContentCard({ tierContent, hasAccess }: TierContentCardProps) {
       {isExpanded && (
         <div className="p-6">
           {hasAccess ? (
-            <div className="space-y-6">
-              {tierContent.content.sections.map((section, index) => (
-                <div key={index} className="space-y-3">
-                  <h3 className="text-lg font-semibold text-[var(--app-foreground)]">
-                    {section.title}
+            <div className="space-y-4">
+              {benefits.length > 0 ? (
+                benefits.map((benefit, index) => (
+                  <PostCard 
+                    key={index} 
+                    content={benefit} 
+                    index={index}
+                    tierColor={tierInfo.color}
+                    tierName={tierInfo.name}
+                  />
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--app-gray)] flex items-center justify-center">
+                    <Icon name="star" size="lg" className="text-[var(--app-foreground-muted)]" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-[var(--app-foreground)] mb-2">
+                    No Posts Yet
                   </h3>
-                  <p className="text-[var(--app-foreground-muted)] leading-relaxed">
-                    {section.content}
+                  <p className="text-[var(--app-foreground-muted)] max-w-md mx-auto">
+                    No exclusive content has been posted for this tier yet. Check back later for amazing content!
                   </p>
-                  {index < tierContent.content.sections.length - 1 && (
-                    <div className="border-b border-current border-opacity-10 pb-3"></div>
-                  )}
                 </div>
-              ))}
+              )}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <Icon name="plus" size="lg" className="text-[var(--app-foreground-muted)] mx-auto mb-4 transform rotate-45" />
-              <h3 className="text-lg font-semibold text-[var(--app-foreground)] mb-2">
-                {tierContent.name} Tier Required
+            <div className="text-center py-12">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+                <Icon name="plus" size="lg" className="text-red-500 transform rotate-45" />
+              </div>
+              <h3 className="text-xl font-semibold text-[var(--app-foreground)] mb-2">
+                {tierInfo.name} Tier Required
               </h3>
-              <p className="text-[var(--app-foreground-muted)] mb-4">
-                You need to own at least one {tierContent.name} NFT to access this content.
+              <p className="text-[var(--app-foreground-muted)] mb-6 max-w-md mx-auto">
+                You need to own at least one {tierInfo.name} NFT to access this exclusive content.
               </p>
               <Button
                 onClick={() => window.history.back()}
                 variant="primary"
                 size="md"
+                className="px-6"
               >
-                Mint {tierContent.name} NFT
+                <Icon name="wallet" size="sm" className="mr-2" />
+                Mint {tierInfo.name} NFT
               </Button>
             </div>
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+interface PostCardProps {
+  content: string;
+  index: number;
+  tierColor: string;
+  tierName: string;
+}
+
+function PostCard({ content, index, tierColor, tierName }: PostCardProps) {
+  // Generate a pseudo-random date for demo purposes (you can replace with actual timestamps later)
+  const date = new Date();
+  date.setDate(date.getDate() - Math.floor(Math.random() * 30));
+  const formattedDate = date.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+
+  // Get first 150 characters for preview if content is long
+  const isLong = content.length > 150;
+  const preview = isLong ? content.substring(0, 150) + '...' : content;
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="bg-[var(--app-card-bg)] border border-[var(--app-card-border)] rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300">
+      {/* Post Header */}
+      <div className="p-6 pb-4">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <div className={`w-10 h-10 rounded-full bg-gradient-to-r ${tierColor} flex items-center justify-center`}>
+              <span className="text-white font-bold text-sm">
+                {tierName.charAt(0)}
+              </span>
+            </div>
+            <div>
+              <h4 className="font-semibold text-[var(--app-foreground)]">
+                {tierName} Exclusive
+              </h4>
+              <p className="text-sm text-[var(--app-foreground-muted)]">
+                {formattedDate}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="px-3 py-1 rounded-full bg-[var(--app-gray)] text-xs font-medium text-[var(--app-foreground-muted)]">
+              Post #{index + 1}
+            </div>
+          </div>
+        </div>
+
+        {/* Post Content */}
+        <div className="space-y-3">
+          <p className="text-[var(--app-foreground)] leading-relaxed whitespace-pre-wrap">
+            {isExpanded || !isLong ? content : preview}
+          </p>
+          
+          {isLong && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-[var(--app-accent)] hover:text-[var(--app-accent-hover)] text-sm font-medium transition-colors"
+            >
+              {isExpanded ? 'Show less' : 'Read more'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Post Footer */}
+      <div className="px-6 py-4 bg-[var(--app-gray)] border-t border-[var(--app-card-border)]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button className="flex items-center space-x-2 text-[var(--app-foreground-muted)] hover:text-[var(--app-foreground)] transition-colors">
+              <Icon name="star" size="sm" />
+              <span className="text-sm">Exclusive Content</span>
+            </button>
+          </div>
+          <div className="flex items-center space-x-2 text-[var(--app-foreground-muted)]">
+            <Icon name="check" size="sm" className="text-green-500" />
+            <span className="text-sm">Verified {tierName} Content</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
