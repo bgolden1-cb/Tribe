@@ -40,8 +40,7 @@ export function CreateTribeModal({ isOpen, onClose, onCreateTribe, isSubmitting 
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!formData.name.trim() || isSubmitting) return;
 
     try {
@@ -84,7 +83,7 @@ export function CreateTribeModal({ isOpen, onClose, onCreateTribe, isSubmitting 
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <div className="p-6 space-y-6">
           {/* Tribe Name */}
           <div>
             <label className="block text-sm font-semibold text-[var(--app-foreground)] mb-2">
@@ -229,7 +228,7 @@ export function CreateTribeModal({ isOpen, onClose, onCreateTribe, isSubmitting 
               Cancel
             </Button>
             <Button
-              type="submit"
+              onClick={() => handleSubmit()}
               variant="primary"
               disabled={isSubmitting || !formData.name.trim()}
               icon={isSubmitting ? undefined : <Icon name="users" size="sm" />}
@@ -238,7 +237,7 @@ export function CreateTribeModal({ isOpen, onClose, onCreateTribe, isSubmitting 
               {isSubmitting ? "Creating Tribe..." : "Create Tribe"}
             </Button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
