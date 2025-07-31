@@ -32,8 +32,7 @@ export function ListTokenModal({
     hash: txHash,
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     
     if (!price || !expiration) {
       alert("Please fill in all fields");
@@ -121,14 +120,13 @@ export function ListTokenModal({
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[var(--app-foreground)] mb-2">
                 Price (ETH)
               </label>
               <input
                 type="number"
-                step="0.001"
                 min="0"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
@@ -172,7 +170,7 @@ export function ListTokenModal({
                 Cancel
               </Button>
               <Button
-                type="submit"
+                onClick={() => handleSubmit()}
                 variant="primary"
                 size="md"
                 className="flex-1"
