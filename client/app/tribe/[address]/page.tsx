@@ -45,6 +45,7 @@ export default function TribePage() {
   const { isConnected, address: userAddress } = useAccount();
   const [selectedTier, setSelectedTier] = useState<TierType | null>(null);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
+  const [refetchTrigger, setRefetchTrigger] = useState(0);
 
   const tribeAddress = params.address as Address;
   const { writeContract } = useWriteContract();
@@ -100,8 +101,16 @@ export default function TribePage() {
       console.log("NFT minted successfully!");
       setTxHash(undefined);
       setSelectedTier(null);
-      // Refetch user's NFTs after successful mint
+      
+      // Immediate refetch
       refetchUserNFTs();
+      setRefetchTrigger(prev => prev + 1);
+      
+      // Additional refetch after a short delay to ensure blockchain data is updated
+      setTimeout(() => {
+        refetchUserNFTs();
+        setRefetchTrigger(prev => prev + 1);
+      }, 1000);
     }
   }, [isConfirmed, txHash, refetchUserNFTs]);
 
@@ -214,6 +223,7 @@ export default function TribePage() {
                 onMint={handleMint}
                 isLoading={isConfirming && selectedTier === tier.type}
                 disabled={!isConnected || isConfirming}
+                refetchTrigger={refetchTrigger}
               />
             ))}
           </div>
@@ -310,30 +320,40 @@ interface TierCardProps {
   onMint: (tier: TierType, price: bigint) => void;
   isLoading: boolean;
   disabled: boolean;
+  refetchTrigger: number;
 }
 
-function TierCard({ tier, tribeAddress, onMint, isLoading, disabled }: TierCardProps) {
+function TierCard({ tier, tribeAddress, onMint, isLoading, disabled, refetchTrigger }: TierCardProps) {
   // Fetch tier data
-  const { data: maxSupply, isLoading: maxSupplyLoading } = useReadContract({
+  const { data: maxSupply, isLoading: maxSupplyLoading, refetch: refetchMaxSupply } = useReadContract({
     address: tribeAddress,
     abi: TribeNFTAbi,
     functionName: "maxSupplies",
     args: [BigInt(tier.type)],
-  }) as { data: bigint | undefined; isLoading: boolean };
+  }) as { data: bigint | undefined; isLoading: boolean; refetch: () => void };
 
-  const { data: currentSupply, isLoading: currentSupplyLoading } = useReadContract({
+  const { data: currentSupply, isLoading: currentSupplyLoading, refetch: refetchCurrentSupply } = useReadContract({
     address: tribeAddress,
     abi: TribeNFTAbi,
     functionName: "currentSupplies", 
     args: [BigInt(tier.type)],
-  }) as { data: bigint | undefined; isLoading: boolean };
+  }) as { data: bigint | undefined; isLoading: boolean; refetch: () => void };
 
-  const { data: price, isLoading: priceLoading } = useReadContract({
+  const { data: price, isLoading: priceLoading, refetch: refetchPrice } = useReadContract({
     address: tribeAddress,
     abi: TribeNFTAbi,
     functionName: "prices",
     args: [BigInt(tier.type)],
-  }) as { data: bigint | undefined; isLoading: boolean };
+  }) as { data: bigint | undefined; isLoading: boolean; refetch: () => void };
+
+  // Refetch tier data when refetchTrigger changes
+  useEffect(() => {
+    if (refetchTrigger > 0) {
+      refetchMaxSupply();
+      refetchCurrentSupply();
+      refetchPrice();
+    }
+  }, [refetchTrigger, refetchMaxSupply, refetchCurrentSupply, refetchPrice]);
 
 
 
