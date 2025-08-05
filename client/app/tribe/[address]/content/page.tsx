@@ -72,7 +72,7 @@ export default function ContentPage() {
       setIsLoading(true);
       setError(null);
       
-      fetch(`http://localhost:4000/api/benefits?contract=${tribeAddress}&address=${userAddress}`)
+      fetch(`https://tribe-jet-beta.vercel.app/api/benefits?contract=${tribeAddress}&address=${userAddress}`)
         .then(res => {
           if (!res.ok) {
             throw new Error('Failed to fetch benefits');

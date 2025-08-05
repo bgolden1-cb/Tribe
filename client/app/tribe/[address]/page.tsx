@@ -180,7 +180,7 @@ export default function TribePage() {
   const handleCreatePost = async (postData: PostData) => {
     setIsCreatingPost(true);
     try {
-      const response = await fetch('http://localhost:4000/api/benefit/multi', {
+      const response = await fetch('https://tribe-jet-beta.vercel.app/api/benefit/multi', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
